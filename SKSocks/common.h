@@ -1,5 +1,43 @@
 #pragma once
 
+/*
+
+	This file is part of SKSocks.
+
+	SKSocks is free software: you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation, either version 3 of the License, or
+	(at your option) any later version.
+
+	SKSocks is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
+
+	You should have received a copy of the GNU General Public License
+	along with SKSocks.  If not, see <https://www.gnu.org/licenses/>.
+
+*/
+
+/*
+	***********************************************************
+	* 请勿修改本文件的任何内容。本文件为SK Socks定义文件。
+	* 如果您使用了本文件，请注意本文件禁止被修改。
+	* 感谢您的理解。
+
+	* 绑卡实名
+	* 软件定制
+	* 远控制作
+	* 直绑3+2
+	* 棋牌站定制
+	* 大量出售微信、QQ号
+	* 开卡技术
+	* 过ZFB人脸识别、V信限额代取
+	* DDOS压力测试
+	* 请联系 QQ 1764655874
+
+*/
+
 #ifndef _WIN32
 #define INVALID_SOCKET  (SOCKET)(~0)
 #define SOCKET_ERROR            (-1)
