@@ -1,6 +1,8 @@
 ﻿// SKSocks-server.cpp : 此文件包含 "main" 函数。程序执行将在此处开始并结束。
 //
 
+// SK 博客网址： https://www.fou.ink/
+
 #include "pch.h"
 #include <vector>
 #include <math.h>

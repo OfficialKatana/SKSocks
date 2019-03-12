@@ -1,5 +1,7 @@
 #pragma once
 
+// SK ²©¿ÍÍøÖ·£º https://www.fou.ink/
+
 /*
 
 	This file is part of SKSocks.
