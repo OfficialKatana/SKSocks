@@ -62,6 +62,8 @@
 #define SK_Halo "SK Socket!"
 
 #define SK_Conn 1001
+#define SK_ServerConfigFile "server.hpp"
+#define SK_ClientConfigFile "client.hpp"
 
 #define SK_Conn_IPV6 0x1
 #define SK_Conn_IPV4 0x2 // IPV4

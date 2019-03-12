@@ -4,25 +4,6 @@
 #include "pch.h"
 
 /*
-
-	This file is part of SKSocks.
-
-	SKSocks is free software: you can redistribute it and/or modify
-	it under the terms of the GNU General Public License as published by
-	the Free Software Foundation, either version 3 of the License, or
-	(at your option) any later version.
-
-	SKSocks is distributed in the hope that it will be useful,
-	but WITHOUT ANY WARRANTY; without even the implied warranty of
-	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-	GNU General Public License for more details.
-
-	You should have received a copy of the GNU General Public License
-	along with SKSocks.  If not, see <https://www.gnu.org/licenses/>.
-
-*/
-
-/*
 	***********************************************************
 	* 请勿修改本注释的任何内容。本文件为SK Socks客户端文件。
 	* 如果您使用了本文件，请注意本注释禁止被修改。
@@ -45,6 +26,25 @@
 	* WEB安全测试，代提权，代getshell
 	* SK团队 专业不止线报
 	* 请联系 QQ 1764655874
+
+*/
+
+/*
+
+	This file is part of SKSocks.
+
+	SKSocks is free software: you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation, either version 3 of the License, or
+	(at your option) any later version.
+
+	SKSocks is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
+
+	You should have received a copy of the GNU General Public License
+	along with SKSocks.  If not, see <https://www.gnu.org/licenses/>.
 
 */
 
@@ -798,13 +798,114 @@ public:
 
 };
 
+// 读写配置文件。
+#include <fstream>
+// Linux或Windows 响应Ctrl+C
+#include <csignal>
+shared_ptr<SKProxy> _theApp;
 
+void sig_handler(int sig)
+{
+	if (sig == SIGINT)
+	{
+		if (_theApp)
+		{
+			_theApp->bStatus = FALSE;
+		}
+		return;
+	}
+}
 
+string GetIpByHostName(string theHost, int isV6)
+{
+	struct addrinfo *answer, hint, *curr;
+	char ipstr[0xffULL];
+	memset(&hint, 0, sizeof(hint));
+	int theFamily = AF_INET;
+	if (isV6)theFamily = AF_INET6;
+	hint.ai_family = theFamily;
+	hint.ai_socktype = SOCK_STREAM;
+
+	int ret = getaddrinfo(theHost.c_str(), NULL, &hint, &answer);
+	if (ret != 0) {
+		cout << "获取IP地址出错，原因未知。" << CPPFAILED_INFO << endl;
+		return string("127.0.0.1");
+	}
+	if (!answer)
+	{
+		return string("127.0.0.1");
+	}
+	for (curr = answer; curr != NULL; curr = curr->ai_next) {
+		inet_ntop(theFamily,
+			&(((struct sockaddr_in *)(curr->ai_addr))->sin_addr),
+			ipstr, 0xffULL);
+		cout << "解析的IP地址是：" << ipstr << endl;
+	}
+
+	freeaddrinfo(answer);
+	return string(ipstr);
+}
+
+void Chg_Config(shared_ptr<SKProxy> _App)
+{
+	ifstream pFile(SK_ClientConfigFile, ios::in);
+	unsigned short remoteport = 6644;
+	unsigned short localport = 9966;
+	string isAutoRun;
+	string remoteAddr;
+	unsigned char cCryptType = SK_Crypt_Xor;
+	int isV6 = FALSE;
+	if (pFile)
+	{
+		pFile >> isAutoRun >> localport >> remoteport >> remoteAddr >> cCryptType >> isV6;
+		pFile.close();
+		_App->cCryptTypeCli = cCryptType;
+		_App->isIPV6 = isV6;
+		_App->theLocalProxyPort = localport;
+		_App->theRemotePort = remoteport;
+		_App->theRemote = GetIpByHostName(remoteAddr, isV6);
+		if (isAutoRun == string("auto"))return;
+	}
+	cout << "请输入本地端口（火狐、QQ等使用Socks5的时候使用的端口）" << endl;
+	cin >> localport;
+	cout << "您输入的本地端口是" << localport << "，请输入远程端口" << endl;
+	cin >> remoteport;
+	cout << "您输入的远程端口是" << remoteport << "，请输入远程域名或IP地址" << endl;
+	cin >> remoteAddr;
+	cout << "您输入的远程地址为" << remoteAddr << "，请输入远程机器是否为IPV6，yes即为是" << endl;
+	cin >> isAutoRun;
+	if (isAutoRun == string("yes"))isV6 = TRUE;
+	string theRemIP = GetIpByHostName(remoteAddr, isV6);
+	cout << "您的选择为" << isAutoRun << "，请输入是否自动读取配置运行（以后不显示设置消息），输入auto即为是。" << endl;
+	cin >> isAutoRun;
+	if (isAutoRun == string("auto"))
+	{
+		ofstream pOut(SK_ClientConfigFile, ios::out);
+		if (pOut) {
+			pOut << isAutoRun << endl;
+			pOut << htons(localport) << endl;
+			pOut << htons(remoteport) << endl;
+			pOut << remoteAddr << endl;
+			pOut << cCryptType << endl;
+			pOut << isV6 << endl;
+			pOut.close();
+		}
+	}
+
+	_App->cCryptTypeCli = cCryptType;
+	_App->isIPV6 = isV6;
+	_App->theLocalProxyPort = htons(localport);
+	_App->theRemotePort = htons(remoteport);
+	_App->theRemote = theRemIP;
+	return;
+}
 
 int main()
 {
 	cout << "SK Socks 支持IPV6。可以使用SK Socks穿透防火墙访问内网资源哦~" << endl;
 	cout << "仅供学习用途，SK团队不对本工具的稳定性以及使用用途作出任何保证。" << endl;
+	cout << "本版本为客户端。" << endl;
+
 #ifdef _WIN32
 	WORD wVersionRequested;
 	WSADATA wsaData;
@@ -825,8 +926,9 @@ int main()
 	}
 	*/
 #endif
-	shared_ptr<SKProxy> _theApp(new SKProxy);
+	_theApp.reset(new SKProxy);
 	_theApp->bStatus = TRUE;
+	Chg_Config(_theApp);
 	thread(&SKProxy::Main, _theApp).join();
 #ifdef _WIN32
 	WSACleanup();

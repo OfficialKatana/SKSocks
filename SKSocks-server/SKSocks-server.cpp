@@ -6,25 +6,6 @@
 #include <math.h>
 
 /*
-
-	This file is part of SKSocks.
-
-	SKSocks is free software: you can redistribute it and/or modify
-	it under the terms of the GNU General Public License as published by
-	the Free Software Foundation, either version 3 of the License, or
-	(at your option) any later version.
-
-	SKSocks is distributed in the hope that it will be useful,
-	but WITHOUT ANY WARRANTY; without even the implied warranty of
-	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-	GNU General Public License for more details.
-
-	You should have received a copy of the GNU General Public License
-	along with SKSocks.  If not, see <https://www.gnu.org/licenses/>.
-
-*/
-
-/*
 	***********************************************************
 	* 请勿修改本注释的任何内容。本文件为SK Socks服务端文件。
 	* 如果您使用了本文件，请注意本注释禁止被修改。
@@ -47,6 +28,25 @@
 	* WEB安全测试，代提权，代getshell
 	* SK团队 专业不止线报
 	* 请联系 QQ 1764655874
+
+*/
+
+/*
+
+	This file is part of SKSocks.
+
+	SKSocks is free software: you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation, either version 3 of the License, or
+	(at your option) any later version.
+
+	SKSocks is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
+
+	You should have received a copy of the GNU General Public License
+	along with SKSocks.  If not, see <https://www.gnu.org/licenses/>.
 
 */
 
@@ -586,6 +586,73 @@ public:
 
 // 读写配置文件。
 #include <fstream>
+// Linux或Windows 响应Ctrl+C
+#include <csignal>
+shared_ptr<SKServerApp> _theApp;
+
+void sig_handler(int sig)
+{
+	if (sig == SIGINT)
+	{
+		if (_theApp)
+		{
+			_theApp->bStatus = FALSE;
+		}
+		return;
+	}
+}
+
+void Chg_Config(shared_ptr<SKServerApp> _App)
+{
+	ifstream pFile(SK_ServerConfigFile, ios::in);
+	unsigned short port = 6644;
+	string isAutoRun;
+	unsigned long long qwAuthType = SK_AUTH_NO;
+	unsigned char cCryptType = SK_Crypt_Xor;
+	int isV6 = FALSE;
+	if (pFile)
+	{
+		pFile >> isAutoRun >> port >> qwAuthType >> cCryptType >> isV6;
+		_App->theServerRunon = port;
+		_App->cCryptTypeServer = cCryptType;
+		_App->isIPV6 = isV6;
+		pFile.close();
+		if (isAutoRun == string("auto"))
+		{
+			return;
+		}
+	}
+	cout << "请输入要绑定的端口。。。" << endl;
+	cin >> port;
+	cout << "您输入的端口是" << port << "，请输入是否自动运行，输入auto为自动运行(以后不提示直接运行)，其它为不自动运行。" << endl;
+	cin >> isAutoRun;
+	cout << "请输入是否为IPV6，yes即为是。" << endl;
+	string buffer_IPV6;
+	cin >> buffer_IPV6;
+	if (buffer_IPV6 == string("yes"))
+		isV6 = TRUE;
+	if (isAutoRun == string("auto"))
+	{
+		ofstream pOut(SK_ServerConfigFile, ios::out);
+		if (pOut) {
+			pOut << isAutoRun << endl;
+			pOut << htons(port) << endl;
+			pOut << qwAuthType << endl;
+			pOut << cCryptType << endl;
+			pOut << isV6 << endl;
+			pOut.close();
+		}
+	}
+
+	pFile >> isAutoRun >> port >> qwAuthType >> cCryptType >> isV6;
+	_App->theServerRunon = htons(port);
+	_App->cCryptTypeServer = cCryptType;
+	_App->isIPV6 = isV6;
+
+	return;
+}
+
+
 
 int main()
 {
@@ -611,8 +678,10 @@ int main()
 		return 1;
 	}
 	*/
-	shared_ptr<SKServerApp> _theApp(new SKServerApp);
+	_theApp.reset(new SKServerApp);
+	signal(SIGINT, sig_handler);
 	_theApp->bStatus = TRUE;
+	Chg_Config(_theApp);
 	thread(&SKServerApp::Main, _theApp).join();
 
 #ifdef _WIN32
