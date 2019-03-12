@@ -18,6 +18,10 @@
 #include <string.h>
 #include <pthread.h>
 #include <sys/epoll.h>
+#ifdef NULL
+#undef NULL
+#define NULL 0
+#endif
 #endif
 #ifndef _WIN32
 typedef int SOCKET;
@@ -40,8 +44,8 @@ public:
 	unsigned short theLocalProxyPort = htons(9966);
 	BOOL isIPV6 = FALSE;
 	unsigned char cCryptTypeCli = SK_Crypt_Xor;
-
-	BOOL CryptData(char* lpData, size_t qwLen, unsigned char cCryptType, string lpKey)
+protected:
+	virtual BOOL CryptData(char* lpData, size_t qwLen, unsigned char cCryptType, string lpKey)
 	{
 		register auto theKeyLen = lpKey.size();
 		switch (cCryptType)
@@ -61,7 +65,7 @@ public:
 		}
 		return FALSE;
 	}
-	BOOL DeCryptData(char* lpData, size_t qwLen, unsigned char cCryptType, string lpKey)
+	virtual BOOL DeCryptData(char* lpData, size_t qwLen, unsigned char cCryptType, string lpKey)
 	{
 		register auto theKeyLen = lpKey.size();
 		switch (cCryptType)
@@ -82,7 +86,7 @@ public:
 		return FALSE;
 	}
 
-	BOOL DoCryptDecrypt(shared_ptr<SK_Package> lpDataPkg, BOOL isCryptData)
+	virtual BOOL DoCryptDecrypt(shared_ptr<SK_Package> lpDataPkg, BOOL isCryptData)
 	{
 		if (!lpDataPkg)return FALSE;
 		if (lpDataPkg->qwDataLen > sizeof(lpDataPkg->lpMemory))return FALSE;
@@ -105,7 +109,7 @@ public:
 		return FALSE;
 	}
 
-	string GenKey(int Len)
+	virtual string GenKey(int Len)
 	{
 		string str;
 		srand(time(NULL));
@@ -127,7 +131,7 @@ public:
 		return str;
 	}
 
-	INT CloseSocket(SOCKET toClose)
+	virtual INT CloseSocket(SOCKET toClose)
 	{
 #ifdef _WIN32
 		auto bRet = closesocket(toClose);
@@ -136,6 +140,8 @@ public:
 		return close(toClose);
 #endif
 	}
+
+	public:
 };
 
 class SKProxy :public SKCommonApp
@@ -207,7 +213,7 @@ public:
 		char port[2]; //bind port
 	}server_connect_responsev6;
 
-public:
+protected:
 	std::string GetHostByName(string HostName, BOOL isV6 = FALSE)
 	{
 		struct addrinfo hints;
@@ -354,8 +360,16 @@ public:
 		return TRUE;
 	}
 
-	BOOL DoAuth(SOCKET sockRem)
+	BOOL DoAuth(SOCKET sockRem, UXLONG authMethod)
 	{
+
+		switch (authMethod)
+		{
+		case SK_AUTH_IMAGE:
+		case SK_AUTH_USER:
+		case SK_AUTH_IMAGE_USER:
+			break;
+		}
 		return FALSE;
 	}
 
@@ -402,7 +416,7 @@ public:
 		case SK_AUTH_IMAGE:
 		case SK_AUTH_USER:
 		case SK_AUTH_IMAGE_USER:
-			if (!DoAuth(sockRem))
+			if (!DoAuth(sockRem, lpReserve))
 			{
 				CloseSocket(sockCli);
 				CloseSocket(sockRem);
@@ -710,7 +724,7 @@ public:
 		// 失败，返回。
 		return FALSE;
 	}
-
+public:
 	int Main()
 	{
 		while (bStatus)
@@ -729,6 +743,9 @@ public:
 		}
 		return 0;
 	}
+public:
+		// TODO: 添加自己的响应函数。
+
 };
 
 
@@ -738,6 +755,7 @@ int main()
 {
 	cout << "SK Socks 支持IPV6。可以使用SK Socks穿透防火墙访问内网资源哦~" << endl;
 	cout << "仅供学习用途，SK团队不对本工具的稳定性以及使用用途作出任何保证。" << endl;
+#ifdef _WIN32
 	WORD wVersionRequested;
 	WSADATA wsaData;
 	int err;
@@ -756,12 +774,13 @@ int main()
 		return 1;
 	}
 	*/
+#endif
 	shared_ptr<SKProxy> _theApp(new SKProxy);
 	_theApp->bStatus = TRUE;
 	thread(&SKProxy::Main, _theApp).join();
-
+#ifdef _WIN32
 	WSACleanup();
-
+#endif
 	system("pause");
 	return 0;
 }
