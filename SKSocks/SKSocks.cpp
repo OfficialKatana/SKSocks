@@ -99,6 +99,11 @@ public:
 	unsigned short theLocalProxyPort = htons(9966);
 	BOOL isIPV6 = FALSE;
 	unsigned char cCryptTypeCli = SK_Crypt_Xor;
+	string ClientSession;
+
+	string ClientUsername;
+	string ClientPassword;
+
 protected:
 	virtual BOOL CryptData(char* lpData, size_t qwLen, unsigned char cCryptType, string lpKey)
 	{
@@ -414,11 +419,38 @@ protected:
 
 	BOOL DoAuth(SOCKET sockRem, UXLONG authMethod)
 	{
-
+		unique_ptr<SK_Auth_Pkg> theAuthPkg;
+		unique_ptr< SK_Session_Pkg> theSession;
+		UXLONG theVerify = 0ULL;
+		theSession.reset(new SK_Session_Pkg);
+		strcpy_s(theSession->lpUserSession, ClientSession.c_str());
+		if (send(sockRem, (char*)&*theSession, sizeof(SK_Session_Pkg), 0) < 0)return FALSE;
+		recv(sockRem, (char*)&theVerify, sizeof(UXLONG), 0);
+		if (theVerify == SK_Auth_Ok)
+		{
+#ifdef _DEBUG
+			cout << "使用Session认证成功！" << CPPFAILED_INFO << endl;
+#endif
+			return TRUE;
+		}
 		switch (authMethod)
 		{
-		case SK_AUTH_IMAGE:
 		case SK_AUTH_USER:
+			theAuthPkg.reset(new SK_Auth_Pkg);
+			strcpy_s(theAuthPkg->lpUserData, ClientUsername.c_str());
+			strcpy_s(theAuthPkg->lpPassword, ClientPassword.c_str());
+			if (send(sockRem, (char*)&*theAuthPkg, sizeof(SK_Auth_Pkg), 0) < 0)return FALSE;
+			theSession.reset(new SK_Session_Pkg);
+			recv(sockRem, (char*)&*theSession, sizeof(SK_Session_Pkg), 0);
+			SEC_STRDATA(theSession->lpUserSession);
+			if (string(theSession->lpUserSession) == string(""))return FALSE;
+			ClientSession = theSession->lpUserSession;
+#ifdef _DEBUG
+			cout << "尝试用用户名和密码登陆成功！" << CPPFAILED_INFO << endl;
+#endif
+			return TRUE;
+			break;
+		case SK_AUTH_IMAGE:
 		case SK_AUTH_IMAGE_USER:
 			break;
 		}
@@ -470,9 +502,16 @@ protected:
 		case SK_AUTH_IMAGE_USER:
 			if (!DoAuth(sockRem, lpReserve))
 			{
+				cout << "登陆验证失败！可能是用户名或密码错误！" << endl;
 				CloseSocket(sockCli);
 				CloseSocket(sockRem);
 				return FALSE;
+			}
+			else
+			{
+#ifdef _DEBUG
+				cout << "登陆成功！开始转发数据！" << CPPFAILED_INFO << endl;
+#endif
 			}
 			break;
 		default:
@@ -855,18 +894,24 @@ void Chg_Config(shared_ptr<SKProxy> _App)
 	unsigned short localport = 9966;
 	string isAutoRun;
 	string remoteAddr;
-	unsigned char cCryptType = SK_Crypt_Xor;
+	string uName, passWd;
+	unsigned short cCryptType = SK_Crypt_Xor;
 	int isV6 = FALSE;
 	if (pFile)
 	{
-		pFile >> isAutoRun >> localport >> remoteport >> remoteAddr >> cCryptType >> isV6;
+		pFile >> isAutoRun >> localport >> remoteport >> remoteAddr >> cCryptType >> isV6 >> uName >> passWd;
 		pFile.close();
-		_App->cCryptTypeCli = cCryptType;
-		_App->isIPV6 = isV6;
-		_App->theLocalProxyPort = localport;
-		_App->theRemotePort = remoteport;
-		_App->theRemote = GetIpByHostName(remoteAddr, isV6);
-		if (isAutoRun == string("auto"))return;
+		if (isAutoRun == string("auto"))
+		{
+			_App->cCryptTypeCli = cCryptType;
+			_App->isIPV6 = isV6;
+			_App->theLocalProxyPort = localport;
+			_App->theRemotePort = remoteport;
+			_App->theRemote = GetIpByHostName(remoteAddr, isV6);
+			_App->ClientUsername = uName;
+			_App->ClientPassword = passWd;
+			return;
+		}
 	}
 	cout << "请输入本地端口（火狐、QQ等使用Socks5的时候使用的端口）" << endl;
 	cin >> localport;
@@ -880,6 +925,15 @@ void Chg_Config(shared_ptr<SKProxy> _App)
 	string theRemIP = GetIpByHostName(remoteAddr, isV6);
 	cout << "您的选择为" << isAutoRun << "，请输入是否自动读取配置运行（以后不显示设置消息），输入auto即为是。" << endl;
 	cin >> isAutoRun;
+	cout << "您的选择是" << isAutoRun << "。请输入用户名，如不需要登陆请直接按回车键。" << endl;
+	cin >> uName;
+	if (uName != string(""))
+	{
+		_App->ClientUsername = uName;
+		cout << "请输入密码" << endl;
+		cin >> passWd;
+		_App->ClientPassword = passWd;
+	}
 	if (isAutoRun == string("auto"))
 	{
 		ofstream pOut(SK_ClientConfigFile, ios::out);
@@ -890,6 +944,8 @@ void Chg_Config(shared_ptr<SKProxy> _App)
 			pOut << remoteAddr << endl;
 			pOut << cCryptType << endl;
 			pOut << isV6 << endl;
+			pOut << uName << endl;
+			pOut << passWd << endl;
 			pOut.close();
 		}
 	}

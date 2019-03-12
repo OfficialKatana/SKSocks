@@ -66,6 +66,7 @@
 #define SK_Conn 1001
 #define SK_ServerConfigFile "server.hpp"
 #define SK_ClientConfigFile "client.hpp"
+#define SK_ServerUserFile "ufile.txt"
 
 #define SK_Conn_IPV6 0x1
 #define SK_Conn_IPV4 0x2 // IPV4
@@ -118,6 +119,29 @@ typedef struct SK_Package
 #define SK_Auth_UserNamePwd 10ULL
 #define SK_Auth_IP_Restrict 11ULL
 #define SK_Auth_Master 12ULL
+#define SK_Auth_GetSession 13ULL
 #define SK_Auth_Version "1.0"
+
+#define SK_Auth_Incorrect 0ULL
+#define SK_Auth_Ok 1ULL
+#define SK_Auth_Need_Captcha 2ULL
+#define SK_Auth_Need_User 3ULL
+#define SK_Auth_Need_User_And_Captcha 4ULL
+
+#define SK_Session_Key_Len 16ULL
+#define SK_Auth_UNAME_PWD_Len 32ULL
+
+typedef struct SK_Auth_Session_Pkg
+{
+	char lpUserSession[SK_Session_Key_Len] = { 0 };
+}SK_Session_Pkg, *PSK_Session_Pkg;
+
+typedef struct SK_OAuth_Pkg
+{
+	typedef unsigned long long UINT64;
+	char lpUserData[SK_Auth_UNAME_PWD_Len] = { 0 };
+	char lpPassword[SK_Auth_UNAME_PWD_Len] = { 0 };
+	UINT64 lpReserve = 0ULL;
+}SK_Auth_Pkg, *PSK_Auth_Pkg;
 
 

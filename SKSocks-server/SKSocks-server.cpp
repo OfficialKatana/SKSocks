@@ -100,6 +100,7 @@ struct RSAApp
 	size_t theVecSize = 0ULL;
 	vector<unsigned long> theArray;
 	BOOL Initialized = FALSE;
+
 	bool judgeprime(unsigned i) {
 		int j;
 		for (j = 2U; j <= sqrt(i); j++)
@@ -172,6 +173,8 @@ public:
 	BOOL isIPV6 = FALSE;
 	unsigned long long qwAuthType = SK_AUTH_NO;
 	unsigned char cCryptTypeServer = SK_Crypt_Xor;
+	string ServerSession;
+	map<string, string> userMap;
 
 protected:
 	virtual BOOL CryptData(char* lpData, size_t qwLen, unsigned char cCryptType, string lpKey)
@@ -363,6 +366,71 @@ protected:
 		return sockClient;
 	}
 
+	BOOL ChkUserPwd(string UNAME, string PWD)
+	{
+		auto mItor = userMap.find(UNAME);
+		if (mItor == userMap.end())return FALSE;
+		if (mItor->second != PWD)return FALSE;
+		return TRUE;
+	}
+public:
+
+	void AddUser(string UNAME, string PWD)
+	{
+		userMap[UNAME] = PWD;
+	}
+
+	BOOL RemoveUser(string UNAME)
+	{
+		// 建议加锁。懒得加了。
+		// 推荐数据库实现，不过数据库实现的话性能就很差了。
+		// 如果用数据库实现，建议把频繁连接的用户缓存到map容器里面。
+		auto mItor = userMap.find(UNAME);
+		if (mItor == userMap.end())return FALSE;
+		userMap.erase(mItor);
+		return TRUE;
+	}
+protected:
+
+	BOOL DoAuth(SOCKET sockCli, UXLONG qwMethod)
+	{
+		unique_ptr<SK_Auth_Pkg> theAuthPkg;
+		unique_ptr< SK_Session_Pkg> theSession;
+		UXLONG lpReserve = SK_Auth_Incorrect;
+		theSession.reset(new SK_Session_Pkg);
+		recv(sockCli, (char*)&*theSession, sizeof(SK_Session_Pkg), 0);
+		SEC_STRDATA(theSession->lpUserSession);
+		if (string(theSession->lpUserSession) == ServerSession)
+		{
+			lpReserve = SK_Auth_Ok;
+			if (send(sockCli, (char*)&lpReserve, sizeof(UXLONG), 0) < 0)return FALSE;
+			return TRUE;
+		}
+		switch (qwMethod)
+		{
+		case SK_AUTH_USER:
+			if (send(sockCli, (char*)&lpReserve, sizeof(UXLONG), 0) < 0)return FALSE;
+			theAuthPkg.reset(new SK_Auth_Pkg);
+			recv(sockCli, (char*)&*theAuthPkg, sizeof(SK_Auth_Pkg), 0);
+			SEC_STRDATA(theAuthPkg->lpUserData);
+			SEC_STRDATA(theAuthPkg->lpPassword);
+			theSession.reset(new SK_Session_Pkg);
+			if (!ChkUserPwd(theAuthPkg->lpUserData, theAuthPkg->lpPassword))
+			{
+				strcpy_s(theSession->lpUserSession, "");
+				send(sockCli, (char*)&*theSession, sizeof(SK_Session_Pkg), 0);
+				return FALSE;
+			}
+			strcpy_s(theSession->lpUserSession, ServerSession.c_str());
+			if (send(sockCli, (char*)&*theSession, sizeof(SK_Session_Pkg), 0) < 0)return FALSE;
+			return TRUE;
+			break;
+		default:
+			break;
+		}
+		return FALSE;
+	}
+
 	BOOL DoFodReal(SOCKET sockCli, SOCKET sockReal, shared_ptr<SK_ConInfo> theSkPkg)
 	{
 		if (!theSkPkg)
@@ -495,8 +563,11 @@ protected:
 
 		if (qwAuthType != SK_AUTH_NO)
 		{
-			if (!DoVerify(sockCli))
+			if (!DoAuth(sockCli, qwAuthType))
 			{
+#ifdef _DEBUG
+				cout << "有一个用户登陆失败，如果频繁看见这个消息，请小心用户名和密码爆破。" << CPPFAILED_INFO << endl;
+#endif // _DEBUG
 				CloseSocket(sockCli);
 				CloseSocket(theReal);
 				return FALSE;
@@ -515,6 +586,8 @@ protected:
 		int AFNET = AF_INET;
 		if (isIPV6)AFNET = AF_INET6;
 		SOCKET sockSrv = socket(AFNET, SOCK_STREAM, 0);
+		// 最长不超过 SK_Session_Key_Len （定义为16ULL，就是15字节长）
+		ServerSession = GenKey(8);
 		if (sockSrv == INVALID_SOCKET)
 		{
 			cout << "创建SOCKET失败。" << CPPFAILED_INFO << endl;
@@ -607,20 +680,36 @@ void sig_handler(int sig)
 void Chg_Config(shared_ptr<SKServerApp> _App)
 {
 	ifstream pFile(SK_ServerConfigFile, ios::in);
-	unsigned short port = 6644;
+	unsigned short port = htons(6644);
 	string isAutoRun;
 	unsigned long long qwAuthType = SK_AUTH_NO;
-	unsigned char cCryptType = SK_Crypt_Xor;
+	unsigned short cCryptType = SK_Crypt_Xor;
 	int isV6 = FALSE;
 	if (pFile)
 	{
 		pFile >> isAutoRun >> port >> qwAuthType >> cCryptType >> isV6;
-		_App->theServerRunon = port;
-		_App->cCryptTypeServer = cCryptType;
-		_App->isIPV6 = isV6;
 		pFile.close();
 		if (isAutoRun == string("auto"))
 		{
+			_App->theServerRunon = port;
+			_App->cCryptTypeServer = cCryptType;
+			_App->isIPV6 = isV6;
+			_App->qwAuthType = qwAuthType;
+			cout << "当前信息：端口" << htons(port) << "，登陆类型" << qwAuthType << "，IPv6：" << isV6 << endl;
+			if (qwAuthType == SK_AUTH_USER)
+			{
+				ifstream uFile(SK_ServerUserFile, ios::in);
+				if (uFile)
+				{
+					string szUser, szPwd;
+					while (uFile.peek() != EOF)
+					{
+						uFile >> szUser >> szPwd;
+						_App->AddUser(szUser, szPwd);
+					}
+					uFile.close();
+				}
+			}
 			return;
 		}
 	}
@@ -633,6 +722,33 @@ void Chg_Config(shared_ptr<SKServerApp> _App)
 	cin >> buffer_IPV6;
 	if (buffer_IPV6 == string("yes"))
 		isV6 = TRUE;
+	cout << "请输入是否需要用户登陆，用户名和密码列表在" SK_ServerUserFile "里面，输入yes即为需要。" << endl;
+	cout << "用户名密码格式为：用户名 （空格） 密码，一行一个数据，用户名和密码不能有空格。如有需要可以自己定制用户名密码验证。" << endl;
+	cout << "注意：用户名和密码的长度均不能超过" << (SK_Auth_UNAME_PWD_Len - 1ULL) << "个字符。" << endl;
+	cin >> buffer_IPV6;
+	if (buffer_IPV6 == string("yes"))
+	{
+		qwAuthType = SK_AUTH_USER;
+		ifstream uFile(SK_ServerUserFile, ios::in);
+		unsigned long long qwCount = 0ULL;
+		if (uFile)
+		{
+			string szUser, szPwd;
+			while (uFile.peek() != EOF)
+			{
+				uFile >> szUser >> szPwd;
+				_App->AddUser(szUser, szPwd);
+				qwCount++;
+			}
+			cout << "读取了" << qwCount << "个用户" << endl;
+			uFile.close();
+		}
+		else
+		{
+			cout << "打开用户数据文件操作失败，请检查权限。" << endl;
+		}
+	}
+	
 	if (isAutoRun == string("auto"))
 	{
 		ofstream pOut(SK_ServerConfigFile, ios::out);
@@ -646,10 +762,10 @@ void Chg_Config(shared_ptr<SKServerApp> _App)
 		}
 	}
 
-	pFile >> isAutoRun >> port >> qwAuthType >> cCryptType >> isV6;
 	_App->theServerRunon = htons(port);
 	_App->cCryptTypeServer = cCryptType;
 	_App->isIPV6 = isV6;
+	_App->qwAuthType = qwAuthType;
 
 	return;
 }
