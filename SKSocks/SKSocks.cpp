@@ -18,6 +18,7 @@
 #include <string.h>
 #include <pthread.h>
 #include <sys/epoll.h>
+#include<netdb.h>
 #ifdef NULL
 #undef NULL
 #define NULL 0
@@ -37,6 +38,13 @@ typedef int SOCKET;
 
 class SKCommonApp
 {
+protected:
+	typedef int BOOL;
+	typedef void* LPVOID;
+	typedef unsigned long long UXLONG;
+	typedef unsigned char BYTE;
+	typedef int32_t INT;
+	typedef uint32_t DWORD;
 public:
 	// 全局定义
 	string theRemote = "127.0.0.1";
@@ -86,7 +94,7 @@ protected:
 		return FALSE;
 	}
 
-	virtual BOOL DoCryptDecrypt(shared_ptr<SK_Package> lpDataPkg, BOOL isCryptData)
+	virtual BOOL DoCryptDecrypt(std::shared_ptr<SK_Package> lpDataPkg, BOOL isCryptData)
 	{
 		if (!lpDataPkg)return FALSE;
 		if (lpDataPkg->qwDataLen > sizeof(lpDataPkg->lpMemory))return FALSE;
@@ -148,16 +156,8 @@ class SKProxy :public SKCommonApp
 {
 public:
 
-protected:
-	typedef int BOOL;
-	typedef void* LPVOID;
-	typedef unsigned long long UXLONG;
-	typedef unsigned char BYTE;
-	typedef int32_t INT;
-	typedef uint32_t DWORD;
-
 public:
-	atomic_int bStatus = FALSE;
+	BOOL bStatus = FALSE;
 
 public:
 	//一、客户端认证请求
@@ -258,10 +258,15 @@ protected:
 		}
 		addr = (struct sockaddr_in *)res->ai_addr;
 		sprintf_s(m_ipaddr, "%d.%d.%d.%d",
-			(*addr).sin_addr.S_un.S_un_b.s_b1,
-			(*addr).sin_addr.S_un.S_un_b.s_b2,
-			(*addr).sin_addr.S_un.S_un_b.s_b3,
-			(*addr).sin_addr.S_un.S_un_b.s_b4);
+#ifndef _WIN32
+			127,0,0,1
+#else
+			(*addr).sin_addr.s_net,
+			(*addr).sin_addr.s_host,
+			(*addr).sin_addr.s_lh,
+			(*addr).sin_addr.s_impno
+#endif
+			);
 #ifdef _DEBUG
 
 		cout << "解析域名IP成功，域名" << HostName << "的IP为" << m_ipaddr << endl;
@@ -686,7 +691,7 @@ protected:
 		}
 
 		SOCKADDR_IN addrSrv;
-		addrSrv.sin_addr.S_un.S_addr = htonl(INADDR_ANY);
+		addrSrv.sin_addr.s_addr = htonl(INADDR_ANY);
 		addrSrv.sin_family = AFNET;
 		addrSrv.sin_port = theLocalProxyPort;
 
@@ -700,13 +705,13 @@ protected:
 		listen(sockSrv, 5);
 
 		SOCKADDR_IN addrClient;// 连接上的客户端ip地址
-		int len = sizeof(SOCKADDR);
+		socklen_t len = sizeof(SOCKADDR);
 
 		cout << "初始化环境成功，开始转发数据。" << endl;
 
 		while (bStatus)
 		{
-			SOCKET sockConn = accept(sockSrv, (SOCKADDR*)&addrClient, &len);// 接受客户端连接,获取客户端的ip地址
+			SOCKET sockConn = accept(sockSrv, (sockaddr *)&addrClient, &len);// 接受客户端连接,获取客户端的ip地址
 #ifdef _DEBUG
 
 			cout << "收到SOCKET，开始转发数据" << endl;

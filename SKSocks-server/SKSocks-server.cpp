@@ -3,6 +3,7 @@
 
 #include "pch.h"
 #include <vector>
+#include <math.h>
 
 #ifdef _WIN32
 #include <WinSock2.h>
@@ -19,6 +20,7 @@
 #include <string.h>
 #include <pthread.h>
 #include <sys/epoll.h>
+#include<netdb.h>
 #ifdef NULL
 #undef NULL
 #define NULL 0
@@ -109,6 +111,14 @@ RSAApp theRsaApp;
 
 class SKCommonApp
 {
+protected:
+	typedef int BOOL;
+	typedef void* LPVOID;
+	typedef unsigned long long UXLONG;
+	typedef unsigned char BYTE;
+	typedef int32_t INT;
+	typedef uint32_t DWORD;
+
 public:
 	// 全局定义
 	unsigned short theServerRunon = htons(6644);
@@ -219,17 +229,7 @@ public:
 class SKServerApp:public SKCommonApp
 {
 public:
-
-protected:
-	typedef int BOOL;
-	typedef void* LPVOID;
-	typedef unsigned long long UXLONG;
-	typedef unsigned char BYTE;
-	typedef int32_t INT;
-	typedef uint32_t DWORD;
-
-public:
-	atomic_int bStatus = FALSE;
+	BOOL bStatus = FALSE;
 
 protected:
 
@@ -475,7 +475,7 @@ protected:
 		}
 
 		SOCKADDR_IN addrSrv;
-		addrSrv.sin_addr.S_un.S_addr = htonl(INADDR_ANY);
+		addrSrv.sin_addr.s_addr = htonl(INADDR_ANY);
 		addrSrv.sin_family = AFNET;
 		addrSrv.sin_port = theServerRunon;
 
@@ -489,7 +489,7 @@ protected:
 		listen(sockSrv, 5);
 
 		SOCKADDR_IN addrClient;// 连接上的客户端ip地址
-		int len = sizeof(SOCKADDR);
+		socklen_t len = sizeof(SOCKADDR);
 
 		cout << "初始化环境成功，开始响应远程请求。" << endl;
 

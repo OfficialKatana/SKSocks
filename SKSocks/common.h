@@ -1,5 +1,14 @@
 #pragma once
 
+#ifndef _WIN32
+#define INVALID_SOCKET  (SOCKET)(~0)
+#define SOCKET_ERROR            (-1)
+#define SOCKADDR sockaddr
+#define SOCKADDR_IN sockaddr_in
+#define strcpy_s strcpy
+#define sprintf_s sprintf
+#endif
+
 #define BUFF_SIZE 1024ULL   //设置转发缓冲区
 #define TIME_OUT 6000000UL //设置复用IO延时
 #define CLIENT_TIME_OUT 6000000UL
@@ -37,6 +46,7 @@ typedef struct SK_ConnInfo
 #define SK_Pkg_Decrypted 0ULL
 typedef struct SK_Package
 {
+	typedef unsigned long long uint64_t;
 	typedef unsigned char CBYTE;
 	CBYTE qwType = SK_Pkg_Decrypted;
 	CBYTE qwCryptType = SK_Crypt_Xor;
