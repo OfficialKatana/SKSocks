@@ -31,14 +31,116 @@ typedef int SOCKET;
 #define TRUE 1
 #endif
 
-
-class SKProxy
+class SKCommonApp
 {
 public:
-
-	string theRemote = "localhost";
-	unsigned short theRemotePort = htons(9966);
+	// 全局定义
+	string theRemote = "127.0.0.1";
+	unsigned short theRemotePort = htons(6644);
 	unsigned short theLocalProxyPort = htons(9966);
+	BOOL isIPV6 = FALSE;
+	unsigned char cCryptTypeCli = SK_Crypt_Xor;
+
+	BOOL CryptData(char* lpData, size_t qwLen, unsigned char cCryptType, string lpKey)
+	{
+		register auto theKeyLen = lpKey.size();
+		switch (cCryptType)
+		{
+		case SK_Crypt_Xor:
+			for (register auto qwFlag = 0ULL; qwFlag < qwLen; qwFlag++)
+			{
+				lpData[qwFlag] ^= lpKey[qwFlag%theKeyLen];
+				lpData[qwFlag] += 0x12;
+			}
+			return TRUE;
+		case SK_Crypt_RSA:
+		case SK_Crypt_AES:
+		case SK_Crypt_DES:
+		case SK_Crypt_RSA_AES:
+			break;
+		}
+		return FALSE;
+	}
+	BOOL DeCryptData(char* lpData, size_t qwLen, unsigned char cCryptType, string lpKey)
+	{
+		register auto theKeyLen = lpKey.size();
+		switch (cCryptType)
+		{
+		case SK_Crypt_Xor:
+			for (register auto qwFlag = 0ULL; qwFlag < qwLen; qwFlag++)
+			{
+				lpData[qwFlag] -= 0x12;
+				lpData[qwFlag] ^= lpKey[qwFlag%theKeyLen];
+			}
+			return TRUE;
+		case SK_Crypt_RSA:
+		case SK_Crypt_AES:
+		case SK_Crypt_DES:
+		case SK_Crypt_RSA_AES:
+			break;
+		}
+		return FALSE;
+	}
+
+	BOOL DoCryptDecrypt(shared_ptr<SK_Package> lpDataPkg, BOOL isCryptData)
+	{
+		if (!lpDataPkg)return FALSE;
+		if (lpDataPkg->qwDataLen > sizeof(lpDataPkg->lpMemory))return FALSE;
+		if (isCryptData)
+		{
+			if (lpDataPkg->qwType == SK_Pkg_Crypted)return TRUE;
+			if (!CryptData(lpDataPkg->lpMemory, lpDataPkg->qwDataLen, lpDataPkg->qwCryptType, lpDataPkg->ExtraData))
+				return FALSE;
+			lpDataPkg->qwType = SK_Pkg_Crypted;
+			return TRUE;
+		}
+		else
+		{
+			if (lpDataPkg->qwType == SK_Pkg_Decrypted)return TRUE;
+			if (!DeCryptData(lpDataPkg->lpMemory, lpDataPkg->qwDataLen, lpDataPkg->qwCryptType, lpDataPkg->ExtraData))
+				return FALSE;
+			lpDataPkg->qwType = SK_Pkg_Decrypted;
+			return TRUE;
+		}
+		return FALSE;
+	}
+
+	string GenKey(int Len)
+	{
+		string str;
+		srand(time(NULL));
+		for (auto i = 0; i < Len; i++)
+		{
+			switch ((rand() % 3))
+			{
+			case 1:
+				str += 'A' + rand() % 26;
+				break;
+			case 2:
+				str += 'a' + rand() % 26;
+				break;
+			default:
+				str += '0' + rand() % 10;
+				break;
+			}
+		}
+		return str;
+	}
+
+	INT CloseSocket(SOCKET toClose)
+	{
+#ifdef _WIN32
+		auto bRet = closesocket(toClose);
+		return bRet;
+#else
+		return close(toClose);
+#endif
+	}
+};
+
+class SKProxy :public SKCommonApp
+{
+public:
 
 protected:
 	typedef int BOOL;
@@ -106,17 +208,6 @@ public:
 	}server_connect_responsev6;
 
 public:
-	INT CloseSocket(SOCKET toClose)
-	{
-#ifdef _WIN32
-		auto bRet = closesocket(toClose);
-		return bRet;
-#else
-		return close(toClose);
-#endif
-	}
-
-public:
 	std::string GetHostByName(string HostName, BOOL isV6 = FALSE)
 	{
 		struct addrinfo hints;
@@ -152,7 +243,11 @@ public:
 		*/
 		if (!res)
 		{
+#ifdef _DEBUG
+
 			cout << "域名解析出错，检测到结构指针为空。" << __FILE__ << "行" << __LINE__ << endl;
+
+#endif // _DEBUG
 			return string("");
 		}
 		addr = (struct sockaddr_in *)res->ai_addr;
@@ -161,7 +256,11 @@ public:
 			(*addr).sin_addr.S_un.S_un_b.s_b2,
 			(*addr).sin_addr.S_un.S_un_b.s_b3,
 			(*addr).sin_addr.S_un.S_un_b.s_b4);
+#ifdef _DEBUG
+
 		cout << "解析域名IP成功，域名" << HostName << "的IP为" << m_ipaddr << endl;
+
+#endif // _DEBUG
 		freeaddrinfo(res);
 		return string(m_ipaddr);
 	}
@@ -190,7 +289,11 @@ public:
 		SOCKET sockClient = socket(theFlagV6, SOCK_STREAM, 0);// AF_INET ..tcp连接
 		if (sockClient == INVALID_SOCKET)
 		{
+#ifdef _DEBUG
+
 			cout << "创建SOCKET失败。" << CPPFAILED_INFO << endl;
+
+#endif // _DEBUG
 			return INVALID_SOCKET;
 		}
 
@@ -199,12 +302,20 @@ public:
 
 		// auto bRet = inet_pton(theFlagV6, strByName.c_str(), &addrSrv.sin_addr);
 		auto bRet = inet_pton(theFlagV6, remHost.c_str(), &addrSrv.sin_addr);
+#ifdef _DEBUG
+
 		cout << "远程地址是：" << remHost << "，端口为：" << long(htons(remport)) << CPPFAILED_INFO << endl;
+
+#endif // _DEBUG
 		addrSrv.sin_family = theFlagV6;
 		addrSrv.sin_port = remport;// 设置端口号
 		if (connect(sockClient, (SOCKADDR*)&addrSrv, sizeof(SOCKADDR)) == SOCKET_ERROR)//连接服务器
 		{
+#ifdef _DEBUG
+
 			cout << "Connect失败。" << "域名为" << remHost << "，端口是" << long(htons(remport)) << CPPFAILED_INFO << endl;
+
+#endif // _DEBUG
 			CloseSocket(sockClient);
 			return INVALID_SOCKET;
 		}
@@ -225,13 +336,17 @@ public:
 		UXLONG Reserve1 = strlen(SK_Halo);
 		if (send(theRem, (char*)&Reserve1, sizeof(UXLONG), 0) < 0)
 		{
+#ifdef _DEBUG
+
 			cout << "远程认证出现问题" << CPPFAILED_INFO << endl;
+
+#endif // _DEBUG
 			return FALSE;
 		}
 		INT theLenRecv = recv(theRem, (char*)&Reserve1, sizeof(UXLONG), 0);
 		if (theLenRecv < 0)return FALSE;
 		if (Reserve1 != strlen(SK_Halo))return FALSE;
-		unique_ptr<char>theStr(new char[sizeof(SK_Halo + 1ULL)]);
+		unique_ptr<char>theStr(new char[sizeof(SK_Halo) + 1ULL]);
 		if (send(theRem, SK_Halo, sizeof(SK_Halo), 0) < 1)return FALSE;
 		if (recv(theRem, &*theStr, sizeof(SK_Halo), 0) < 0)return FALSE;
 		(&*theStr)[sizeof(SK_Halo)] = NULL;
@@ -239,9 +354,9 @@ public:
 		return TRUE;
 	}
 
-	BOOL DoSendProxyMsg(SOCKET sockRem, shared_ptr<theTargetDef> theTarget)
+	BOOL DoAuth(SOCKET sockRem)
 	{
-		return TRUE;
+		return FALSE;
 	}
 
 	BOOL DoFodData(SOCKET sockCli, SOCKET sockRem, shared_ptr<theTargetDef> theTarget)
@@ -252,23 +367,67 @@ public:
 			CloseSocket(sockRem);
 			return FALSE;
 		}
-		/*
+		
 		if (!DoVerify(sockRem))
+		{
+#ifdef _DEBUG
+
+			cout << "与服务器认证失败。" << CPPFAILED_INFO << endl;
+
+#endif // _DEBUG
+			CloseSocket(sockCli);
+			CloseSocket(sockRem);
+			return FALSE;
+		}
+		SK_ConnInfo thePackage;
+		thePackage.cConnCryptType = SK_Crypt_Xor;
+		thePackage.cConnPort = theTarget->port;
+		strcpy_s(thePackage.theDomain, theTarget->theRemIP.c_str());
+		if (theTarget->isV6)
+			thePackage.cConnIPFlag = SK_Conn_IPV6;
+		UXLONG lpReserve = 0ULL;
+		send(sockRem, (char*)&thePackage, sizeof(SK_ConInfo), 0);
+		recv(sockRem, (char*)&lpReserve, sizeof(UXLONG), 0);
+		if (!lpReserve)
 		{
 			CloseSocket(sockCli);
 			CloseSocket(sockRem);
 			return FALSE;
 		}
-		*/
 
-		char recv_buffer[BUFF_SIZE] = { 0 };
+		switch (lpReserve)
+		{
+		case SK_AUTH_NO:
+			break;
+		case SK_AUTH_IMAGE:
+		case SK_AUTH_USER:
+		case SK_AUTH_IMAGE_USER:
+			if (!DoAuth(sockRem))
+			{
+				CloseSocket(sockCli);
+				CloseSocket(sockRem);
+				return FALSE;
+			}
+			break;
+		default:
+			CloseSocket(sockCli);
+			CloseSocket(sockRem);
+			return FALSE;
+		}
+
+		// char recv_buffer[BUFF_SIZE] = { 0 };
 		fd_set fd_read;
 		struct timeval time_out;
 		time_out.tv_sec = 0;
 		time_out.tv_usec = TIME_OUT;
 		int ret = 0;
 
+#ifdef _DEBUG
+
 		cout << "开始转发SOCKET数据流。" << CPPFAILED_INFO << endl;
+
+#endif // _DEBUG
+		shared_ptr< SK_Package> theData;
 
 		while (bStatus)
 		{
@@ -286,11 +445,18 @@ public:
 			}
 			if (FD_ISSET(sockCli, &fd_read))
 			{
-				memset(recv_buffer, 0, BUFF_SIZE);
-				ret = recv(sockCli, recv_buffer, BUFF_SIZE, 0);
+				theData.reset(new SK_Package);
+				ret = recv(sockCli, theData->lpMemory, sizeof(theData->lpMemory), 0);
 				if (ret > 0)
 				{
-					ret = send(sockRem, recv_buffer, ret, 0);
+					string RandKey = GenKey(32);
+					strcpy_s(theData->ExtraData, RandKey.c_str());
+					theData->qwVerify = TRUE;
+					theData->qwType = SK_Pkg_Decrypted;
+					theData->qwCryptType = cCryptTypeCli;
+					theData->qwDataLen = ret;
+					if (!DoCryptDecrypt(theData, TRUE))break;
+					ret = send(sockRem, (char*)&*theData, sizeof(SK_Package), 0);
 					if (ret == -1)
 					{
 						break;
@@ -307,11 +473,15 @@ public:
 			}
 			else if (FD_ISSET(sockRem, &fd_read))
 			{
-				memset(recv_buffer, 0, BUFF_SIZE);
-				ret = recv(sockRem, recv_buffer, BUFF_SIZE, 0);
+				theData.reset(new SK_Package);
+				ret = recv(sockRem, (char*)&*theData, sizeof(SK_Package), MSG_WAITALL);
 				if (ret > 0)
 				{
-					ret = send(sockCli, recv_buffer, ret, 0);
+					if (!theData->qwVerify)break;
+					theData->ExtraData[sizeof(theData->ExtraData) - 1ULL] = NULL;
+					if (!DoCryptDecrypt(theData, FALSE))
+						break;
+					ret = send(sockCli, theData->lpMemory, theData->qwDataLen, 0);
 					if (ret == -1)
 					{
 						break;
@@ -328,6 +498,8 @@ public:
 			}
 		}
 
+		CloseSocket(sockCli);
+		CloseSocket(sockRem);
 		return TRUE;
 	}
 
@@ -375,13 +547,17 @@ public:
 			//认证连接请求
 			if (connect_request->ver != 0x5)
 			{
-				cout << "本地协议错误。" << CPPFAILED_INFO << endl;
+				cout << "本地协议错误。本地请使用 Socks5协议。" << CPPFAILED_INFO << endl;
 				// printf("连接请求协议版本错误\n");
 				break;
 			}
 			if (connect_request->cmd != 0x1)
 			{
+#ifdef _DEBUG
+
 				cout << "不支持非TCP协议！" << CPPFAILED_INFO << endl;
+
+#endif // _DEBUG
 				// printf("连接请求命令错误(非TCP)\n");
 				break;
 			}
@@ -412,11 +588,11 @@ public:
 			if (!isV6)
 				memcpy(&remPort, &connect_request->port, sizeof(connect_request->port));
 			else
-				memcpy(&remPort, ((client_connect_requestv6 *)(&connect_request))->port, sizeof(client_connect_requestv6::port));
+				memcpy(&remPort, ((client_connect_requestv6 *)(connect_request))->port, sizeof(client_connect_requestv6::port));
 
 			// 连接远程加密服务端！
-			//SOCKET dest_fd = ConnToRemote(theRemote, theRemotePort, isV6);
-			SOCKET dest_fd = ConnToRemote(theRemAddr, remPort, isV6);
+			SOCKET dest_fd = ConnToRemote(theRemote, theRemotePort, isV6);
+			// SOCKET dest_fd = ConnToRemote(theRemAddr, remPort, isV6);
 
 			if (dest_fd == INVALID_SOCKET)
 			{
@@ -464,6 +640,14 @@ public:
 
 
 			//全部认证连接建立完成
+
+			int recvTimeout = PKG_TRANSFER_TIME_OUT;   // 接收超时
+			int sendTimeout = PKG_TRANSFER_TIME_OUT;  //发送超时
+
+			setsockopt(theSock, SOL_SOCKET, SO_RCVTIMEO, (char *)&recvTimeout, sizeof(int));
+			setsockopt(theSock, SOL_SOCKET, SO_SNDTIMEO, (char *)&sendTimeout, sizeof(int));
+			setsockopt(dest_fd, SOL_SOCKET, SO_RCVTIMEO, (char *)&recvTimeout, sizeof(int));
+			setsockopt(dest_fd, SOL_SOCKET, SO_SNDTIMEO, (char *)&sendTimeout, sizeof(int));
 			//执行转发程序
 			thread(&SKProxy::DoFodData, this, theSock, dest_fd, _Def).detach();
 			is_Failed = FALSE;
@@ -478,7 +662,9 @@ public:
 	}
 	BOOL SetupClientListen()
 	{
-		SOCKET sockSrv = socket(AF_INET, SOCK_STREAM, 0);
+		int AFNET = AF_INET;
+		if (isIPV6)AFNET = AF_INET6;
+		SOCKET sockSrv = socket(AFNET, SOCK_STREAM, 0);
 		if (sockSrv == INVALID_SOCKET)
 		{
 			cout << "创建SOCKET失败。" << CPPFAILED_INFO << endl;
@@ -487,7 +673,7 @@ public:
 
 		SOCKADDR_IN addrSrv;
 		addrSrv.sin_addr.S_un.S_addr = htonl(INADDR_ANY);
-		addrSrv.sin_family = AF_INET;
+		addrSrv.sin_family = AFNET;
 		addrSrv.sin_port = theLocalProxyPort;
 
 		if (::bind(sockSrv, (SOCKADDR*)&addrSrv, sizeof(SOCKADDR)) == SOCKET_ERROR)// 绑定端口
@@ -501,11 +687,17 @@ public:
 
 		SOCKADDR_IN addrClient;// 连接上的客户端ip地址
 		int len = sizeof(SOCKADDR);
+
+		cout << "初始化环境成功，开始转发数据。" << endl;
+
 		while (bStatus)
 		{
 			SOCKET sockConn = accept(sockSrv, (SOCKADDR*)&addrClient, &len);// 接受客户端连接,获取客户端的ip地址
+#ifdef _DEBUG
 
 			cout << "收到SOCKET，开始转发数据" << endl;
+
+#endif // _DEBUG
 
 			if (sockConn == -1)break;
 
@@ -527,7 +719,11 @@ public:
 				cout<<"循环出现异常" << CPPFAILED_INFO << endl;
 			else
 			{
+#ifdef _DEBUG
+
 				break;
+
+#endif // _DEBUG
 			}
 			cout<<"开始新的循环" << CPPFAILED_INFO << endl;
 		}
@@ -540,6 +736,8 @@ public:
 
 int main()
 {
+	cout << "SK Socks 支持IPV6。可以使用SK Socks穿透防火墙访问内网资源哦~" << endl;
+	cout << "仅供学习用途，SK团队不对本工具的稳定性以及使用用途作出任何保证。" << endl;
 	WORD wVersionRequested;
 	WSADATA wsaData;
 	int err;
@@ -563,6 +761,8 @@ int main()
 	thread(&SKProxy::Main, _theApp).join();
 
 	WSACleanup();
+
+	system("pause");
 	return 0;
 }
 
