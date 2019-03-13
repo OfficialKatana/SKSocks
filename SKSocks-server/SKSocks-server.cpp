@@ -463,7 +463,8 @@ protected:
 			FD_ZERO(&fd_read);
 			FD_SET(sockCli, &fd_read);
 			FD_SET(sockReal, &fd_read);
-			ret = select((sockCli > sockReal ? sockCli : sockReal) + 1, &fd_read, NULL, NULL, &time_out);
+			ret = select(NULL, &fd_read, NULL, NULL, &time_out);
+			// ret = select((sockCli > sockReal ? sockCli : sockReal) + 1, &fd_read, NULL, NULL, &time_out);
 			if (-1 == ret)
 			{
 				break;
