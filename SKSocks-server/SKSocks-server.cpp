@@ -35,20 +35,26 @@
 
 /*
 
-	This file is part of SKSocks.
+	Copyright [2019] [Saurik QQ 1764655874]
 
-	SKSocks is free software: you can redistribute it and/or modify
-	it under the terms of the GNU General Public License as published by
-	the Free Software Foundation, either version 3 of the License, or
-	(at your option) any later version.
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-	SKSocks is distributed in the hope that it will be useful,
-	but WITHOUT ANY WARRANTY; without even the implied warranty of
-	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-	GNU General Public License for more details.
+	http://www.apache.org/licenses/LICENSE-2.0
 
-	You should have received a copy of the GNU General Public License
-	along with SKSocks.  If not, see <https://www.gnu.org/licenses/>.
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+		使用（或者间接引用、参照、复制）本文件（或其中内容）的项目，请务必注明来源，并且必须在显眼位置著名 引用了本文件！
+
+		请务必注明软件原作者以及详细联系方式！
+
+		本软件可以收费售卖，但是您必须说明本软件是可以免费获得的，用户支出的是技术服务费用（智商税）
+		Saurik不反对您售卖这个软件（或者关于这个软件的别的产品），如果您想改进这个软件，欢迎和Saurik洽谈。
 
 */
 
