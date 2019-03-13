@@ -62,7 +62,7 @@ limitations under the License.
 #define sprintf_s sprintf
 #endif
 
-#define BUFF_SIZE 1024ULL   //设置转发缓冲区
+#define BUFF_SIZE 500ULL   //设置转发缓冲区
 #define TIME_OUT 6000000UL //设置复用IO延时
 #define CLIENT_TIME_OUT 6000000UL
 #define PKG_TRANSFER_TIME_OUT 5000UL
