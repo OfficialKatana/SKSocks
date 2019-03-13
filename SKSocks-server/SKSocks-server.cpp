@@ -175,7 +175,7 @@ protected:
 
 public:
 	// 全局定义
-	unsigned short theServerRunon = htons(6644);
+	unsigned short theServerRunon = 0;
 	BOOL isIPV6 = FALSE;
 	unsigned long long qwAuthType = SK_AUTH_NO;
 	unsigned char cCryptTypeServer = SK_Crypt_Xor;

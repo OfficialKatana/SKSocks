@@ -101,8 +101,8 @@ protected:
 public:
 	// 全局定义
 	string theRemote = "127.0.0.1";
-	unsigned short theRemotePort = htons(6644);
-	unsigned short theLocalProxyPort = htons(9966);
+	unsigned short theRemotePort = 0;
+	unsigned short theLocalProxyPort = 0;
 	BOOL isIPV6 = FALSE;
 	unsigned char cCryptTypeCli = SK_Crypt_Xor;
 	string ClientSession;
