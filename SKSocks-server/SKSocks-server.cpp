@@ -278,6 +278,23 @@ protected:
 		return close(toClose);
 #endif
 	}
+
+	BOOL isIPLAN(const string ipstring)
+	{
+		istringstream st(ipstring);
+		int ip[2];
+		for (int i = 0; i < 2; i++)
+		{
+			string temp;
+			getline(st, temp, '.');
+			istringstream a(temp);
+			a >> ip[i];
+		}
+		if ((ip[0] == 10) || (ip[0] == 172 && ip[1] >= 16 && ip[1] <= 31) || (ip[0] == 192 && ip[1] == 168))
+			return TRUE;
+		else return FALSE;
+	}
+
 public:
 	// 成员变量和函数声明
 };
@@ -314,6 +331,14 @@ protected:
 			* 提高安全性。
 			* 建议添加IP过滤规则，防止恶意利用。
 		*/
+
+		if (isIPLAN(IPAddr))
+		{
+#ifdef _DEBUG
+			cout << "禁止访问内网资源！" << CPPFAILED_INFO << endl;
+#endif // _DEBUG
+			return INVALID_SOCKET;
+		}
 
 		int theFlagV6 = AF_INET;
 		if (isIPV6)theFlagV6 = AF_INET6;
@@ -375,6 +400,7 @@ public:
 
 	void AddUser(string UNAME, string PWD)
 	{
+		// 有空建议使用 非可逆加密 加密一下密码。
 		userMap[UNAME] = PWD;
 	}
 
