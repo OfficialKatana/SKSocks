@@ -469,11 +469,12 @@ protected:
 			if (FD_ISSET(sockCli, &fd_read))
 			{
 				theData.reset(new SK_Package);
-				ret = recv(sockCli, (char*)&*theData, sizeof(SK_Package), MSG_WAITALL);
+				ret = 1;
+				recv(sockCli, (char*)&*theData, sizeof(SK_Package), MSG_WAITALL);
 				if (ret > 0)
 				{
 					if (!theData->qwVerify)break;
-					theData->ExtraData[sizeof(theData->ExtraData) - 1ULL] = NULL;
+					SEC_STRDATA(theData->ExtraData);
 					if (!DoCryptDecrypt(theData, FALSE))
 						break;
 					ret = send(sockReal, theData->lpMemory, theData->qwDataLen, 0);
