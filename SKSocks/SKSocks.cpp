@@ -412,14 +412,37 @@ protected:
 #endif // _DEBUG
 			return FALSE;
 		}
-		INT theLenRecv = recv(theRem, (char*)&Reserve1, sizeof(UXLONG), 0);
-		if (theLenRecv < 0)return FALSE;
-		if (Reserve1 != strlen(SK_Halo))return FALSE;
+		recv(theRem, (char*)&Reserve1, sizeof(UXLONG), MSG_WAITALL);
+		if (Reserve1 != strlen(SK_Halo))
+		{
+#ifdef _DEBUG
+
+			cout << "远程认证出现问题 step1" << CPPFAILED_INFO << endl;
+
+#endif // _DEBUG
+			return FALSE;
+		}
 		unique_ptr<char>theStr(new char[sizeof(SK_Halo) + 1ULL]);
-		if (send(theRem, SK_Halo, sizeof(SK_Halo), 0) < 1)return FALSE;
-		if (recv(theRem, &*theStr, sizeof(SK_Halo), 0) < 0)return FALSE;
+		if (send(theRem, SK_Halo, sizeof(SK_Halo), 0) < 1)
+		{
+#ifdef _DEBUG
+
+			cout << "远程认证出现问题 step2" << CPPFAILED_INFO << endl;
+
+#endif // _DEBUG
+			return FALSE;
+		}
+		recv(theRem, &*theStr, sizeof(SK_Halo), MSG_WAITALL);
 		(&*theStr)[sizeof(SK_Halo)] = NULL;
-		if (string(&*theStr) != string(SK_Halo))return FALSE;
+		if (string(&*theStr) != string(SK_Halo))
+		{
+#ifdef _DEBUG
+
+			cout << "远程认证出现问题 step3" << CPPFAILED_INFO << endl;
+
+#endif // _DEBUG
+			return FALSE;
+		}
 		return TRUE;
 	}
 

@@ -292,21 +292,13 @@ protected:
 	BOOL DoVerify(SOCKET theRem)
 	{
 		UXLONG Reserve1 = 0ULL;
-		if (recv(theRem, (char*)&Reserve1, sizeof(UXLONG), 0) < 0)
-		{
-#ifdef _DEBUG
-
-			cout << "远程认证出现问题" << CPPFAILED_INFO << endl;
-
-#endif // _DEBUG
-			return FALSE;
-		}
+		recv(theRem, (char*)&Reserve1, sizeof(UXLONG), MSG_WAITALL);
 		if (Reserve1 != strlen(SK_Halo))Reserve1 = FALSE;
 		INT theLenRecv = send(theRem, (char*)&Reserve1, sizeof(UXLONG), 0);
 		if (theLenRecv < 0)return FALSE;
 		if (!Reserve1)return FALSE;
 		unique_ptr<char>theStr(new char[sizeof(SK_Halo) + 1ULL]);
-		if (recv(theRem, &*theStr, sizeof(SK_Halo), 0) < 0)return FALSE;
+		recv(theRem, &*theStr, sizeof(SK_Halo), MSG_WAITALL);
 		if (send(theRem, SK_Halo, sizeof(SK_Halo), 0) < 1)return FALSE;
 		(&*theStr)[sizeof(SK_Halo)] = NULL;
 		if (string(&*theStr) != string(SK_Halo))return FALSE;
