@@ -637,6 +637,8 @@ protected:
 		}
 
 		CloseSocket(sockSrv);
+		BOOL bDontLinger = FALSE;
+		setsockopt(sockSrv, SOL_SOCKET, SO_DONTLINGER, (const char*)&bDontLinger, sizeof(BOOL));
 
 		if (bStatus)return TRUE;
 		// 失败，返回。
