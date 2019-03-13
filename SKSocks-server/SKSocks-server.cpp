@@ -583,6 +583,15 @@ protected:
 
 		// TODO: 实现验证，懒得实现了。
 
+
+		int recvTimeout = PKG_TRANSFER_TIME_OUT;   // 接收超时
+		int sendTimeout = PKG_TRANSFER_TIME_OUT;  //发送超时
+
+		setsockopt(sockCli, SOL_SOCKET, SO_RCVTIMEO, (char *)&recvTimeout, sizeof(int));
+		setsockopt(sockCli, SOL_SOCKET, SO_SNDTIMEO, (char *)&sendTimeout, sizeof(int));
+		setsockopt(theReal, SOL_SOCKET, SO_RCVTIMEO, (char *)&recvTimeout, sizeof(int));
+		setsockopt(theReal, SOL_SOCKET, SO_SNDTIMEO, (char *)&sendTimeout, sizeof(int));
+
 		thread(&SKServerApp::DoFodReal, this, sockCli, theReal, theSkPkg).detach();
 
 		return TRUE;
