@@ -825,6 +825,11 @@ int main()
 	if (err != 0) {
 		return 0;
 	}
+#else
+	sigset_t set;
+	sigemptyset(&set);
+	sigaddset(&set, SIGPIPE);
+	sigprocmask(SIG_BLOCK, &set, NULL);
 #endif
 	/**
 	if (LOBYTE(wsaData.wVersion) != 1 ||
