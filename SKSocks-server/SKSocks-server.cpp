@@ -647,8 +647,21 @@ protected:
 
 		cout << "初始化环境成功，开始响应远程请求。" << endl;
 
+		
+		chrono::system_clock::time_point theTime = chrono::system_clock::now();
+
 		while (bStatus)
 		{
+			if (chrono::system_clock::now() - theTime > SK_VALID_PERIOD)
+			{
+				ServerSession = GenKey(8);
+#ifdef _DEBUG
+				cout << "保持的状态强制过期，正在更换Session保证用户登陆安全。" << CPPFAILED_INFO << endl;
+#endif // _DEBUG
+
+				theTime = chrono::system_clock::now();
+			}
+		
 			SOCKET sockConn = accept(sockSrv, (SOCKADDR*)&addrClient, &len);// 接受客户端连接,获取客户端的ip地址
 
 #ifdef _DEBUG

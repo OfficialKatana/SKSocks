@@ -77,10 +77,13 @@ limitations under the License.
 #define SO_EXCLUSIVEADDRUSE ((int)(~SO_REUSEADDR)) /* disallow local address reuse */
 #endif
 
-#define BUFF_SIZE 1024ULL   //设置转发缓冲区
-#define TIME_OUT 6000000UL //设置复用IO延时
+#define BUFF_SIZE 1024ULL   // 设置转发缓冲区
+#define TIME_OUT 6000000UL // 设置复用IO延时
 #define CLIENT_TIME_OUT 6000000UL
 #define PKG_TRANSFER_TIME_OUT 5000UL
+#define MAX_RUNNING_THREAD 50ULL // 最大并发是4线程
+#define MAX_THREAD_COUNT 2ULL*MAX_RUNNING_THREAD // 最大缓存线程
+#define SK_VALID_PERIOD chrono::minutes(2)
 
 #define SK_Halo "SK Socket!"
 
