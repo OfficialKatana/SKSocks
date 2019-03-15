@@ -786,6 +786,11 @@ void Chg_Config(shared_ptr<SKServerApp> _App)
 			while (uFile.peek() != EOF)
 			{
 				uFile >> szUser >> szPwd;
+				if (szUser == string("") || szPwd == string(""))
+				{
+					cout << "WARNING: 读取的用户名或密码为空！已经跳过。" << CPPFAILED_INFO << endl;
+					continue;
+				}
 				_App->AddUser(szUser, szPwd);
 				qwCount++;
 			}
