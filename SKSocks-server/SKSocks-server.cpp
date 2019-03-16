@@ -614,12 +614,26 @@ protected:
 
 		return TRUE;
 	}
-
+public:
+	SOCKET sockSrv = NULL;
+	BOOL onStop(LPVOID pInstance)
+	{
+		if (pInstance != this)
+		{
+			return ((SKServerApp*)pInstance)->onStop(pInstance);
+		}
+		if (!sockSrv)return FALSE;
+		CloseSocket(sockSrv);
+		BOOL bDontLinger = FALSE;
+		setsockopt(sockSrv, SOL_SOCKET, SO_DONTLINGER, (const char*)&bDontLinger, sizeof(BOOL));
+		return TRUE;
+	}
+protected:
 	BOOL ServerGetConn()
 	{
 		int AFNET = AF_INET;
 		if (isIPV6)AFNET = AF_INET6;
-		SOCKET sockSrv = socket(AFNET, SOCK_STREAM, 0);
+		sockSrv = socket(AFNET, SOCK_STREAM, 0);
 		// 最长不超过 SK_Session_Key_Len （定义为16ULL，就是15字节长）
 		ServerSession = GenKey(8);
 		if (sockSrv == INVALID_SOCKET)
@@ -721,6 +735,7 @@ void sig_handler(int sig)
 		if (_theApp)
 		{
 			_theApp->bStatus = FALSE;
+			_theApp->onStop(&*_theApp);
 		}
 		return;
 	}
