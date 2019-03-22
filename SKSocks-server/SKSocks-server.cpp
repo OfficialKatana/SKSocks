@@ -569,7 +569,7 @@ protected:
 		SEC_STRDATA(theBuffer);
 		shared_ptr<SK_ConInfo> theSkPkg(new SK_ConInfo);
 		memcpy(&*theSkPkg, theBuffer, sizeof(SK_ConInfo));
-		theSkPkg->theDomain[sizeof(theSkPkg->theDomain) - 1ULL] = NULL;
+		SEC_STRDATA(theSkPkg->theDomain);
 		BOOL theIPV6 = FALSE;
 		if (theSkPkg->cConnIPFlag == SK_Conn_IPV6)theIPV6 = TRUE;
 		SOCKET theReal = GetRealRemoteSock(theSkPkg->theDomain, theSkPkg->cConnPort, theIPV6);
