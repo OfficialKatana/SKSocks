@@ -302,6 +302,8 @@ public:
 class SKServerApp:public SKCommonApp
 {
 public:
+	BOOL Cellular_Free = FALSE;
+public:
 	BOOL bStatus = FALSE;
 
 protected:
@@ -554,6 +556,26 @@ protected:
 	BOOL DoFork(SOCKET sockCli)
 	{
 		char theBuffer[BUFF_SIZE * 2ULL] = { 0 };
+
+		if (Cellular_Free)
+		{
+			// 免流相关
+			BOOL bRet = recv(sockCli, theBuffer, BUFF_SIZE, MSG_WAITALL);
+			if (bRet == -1)
+			{
+#ifdef _DEBUG
+				cout << "接收客户端http报文失败。" << CPPFAILED_INFO << endl;
+#endif // _DEBUG
+				CloseSocket(sockCli);
+				return FALSE;
+			}
+#ifdef _DEBUG
+			cout << "收到http免流报文，内容是" << CPPFAILED_INFO << endl;
+			SEC_STRDATA(theBuffer);
+			cout.write(theBuffer, sizeof(theBuffer));
+#endif // _DEBUG
+		}
+
 		if (!DoVerify(sockCli))
 		{
 #ifdef _DEBUG
@@ -749,9 +771,11 @@ void Chg_Config(shared_ptr<SKServerApp> _App)
 	unsigned long long qwAuthType = SK_AUTH_NO;
 	unsigned short cCryptType = SK_Crypt_Xor;
 	int isV6 = FALSE;
+	int isCellularFree = FALSE;
 	if (pFile)
 	{
-		pFile >> isAutoRun >> port >> qwAuthType >> cCryptType >> isV6;
+		pFile >> isAutoRun >> port >> qwAuthType >> cCryptType >> isV6
+			>> isCellularFree;
 		pFile.close();
 		if (isAutoRun == string("auto"))
 		{
@@ -759,7 +783,9 @@ void Chg_Config(shared_ptr<SKServerApp> _App)
 			_App->cCryptTypeServer = cCryptType;
 			_App->isIPV6 = isV6;
 			_App->qwAuthType = qwAuthType;
+			_App->Cellular_Free = isCellularFree;
 			cout << "当前信息：端口" << htons(port) << "，登陆类型" << qwAuthType << "，IPv6：" << isV6 << endl;
+			cout << "免流配置：" << isCellularFree << endl;
 			if (qwAuthType == SK_AUTH_USER)
 			{
 				ifstream uFile(SK_ServerUserFile, ios::in);
@@ -786,6 +812,15 @@ void Chg_Config(shared_ptr<SKServerApp> _App)
 	cin >> buffer_IPV6;
 	if (buffer_IPV6 == string("yes"))
 		isV6 = TRUE;
+	cout << "请输入是否需要免流？需要请输入yes，不需要请输入任意字符。" << endl;
+	cin >> buffer_IPV6;
+	if (buffer_IPV6 == string("yes"))
+	{
+		isCellularFree = TRUE;
+		port = 80;
+		cout << "您选择了需要免流。" << endl;
+	}
+
 	cout << "请输入是否需要用户登陆，用户名和密码列表在" SK_ServerUserFile "里面，输入yes即为需要。" << endl;
 	cout << "用户名密码格式为：用户名 （空格） 密码，一行一个数据，用户名和密码不能有空格。如有需要可以自己定制用户名密码验证。" << endl;
 	cout << "注意：用户名和密码的长度均不能超过" << (SK_Auth_UNAME_PWD_Len - 1ULL) << "个字符。" << endl;
@@ -817,7 +852,7 @@ void Chg_Config(shared_ptr<SKServerApp> _App)
 			cout << "打开用户数据文件操作失败，请检查权限。" << endl;
 		}
 	}
-	
+
 	if (isAutoRun == string("auto"))
 	{
 		ofstream pOut(SK_ServerConfigFile, ios::out);
@@ -827,6 +862,7 @@ void Chg_Config(shared_ptr<SKServerApp> _App)
 			pOut << qwAuthType << endl;
 			pOut << cCryptType << endl;
 			pOut << isV6 << endl;
+			pOut << isCellularFree << endl;
 			pOut.close();
 		}
 	}
@@ -835,6 +871,7 @@ void Chg_Config(shared_ptr<SKServerApp> _App)
 	_App->cCryptTypeServer = cCryptType;
 	_App->isIPV6 = isV6;
 	_App->qwAuthType = qwAuthType;
+	_App->Cellular_Free = isCellularFree;
 
 	return;
 }

@@ -197,6 +197,22 @@ protected:
 		return str;
 	}
 
+	virtual string GenHttpHead(string szHost)
+	{
+		string cstrSendData;
+		cstrSendData = "GET /RandomCodeAction.action?" + GenKey(12) + "=0.1 HTTP/1.1\r\n";
+		cstrSendData += "Host: " + szHost + "\r\n";
+		cstrSendData += "Connection: keep-alive\r\n";
+		cstrSendData += "Accept: image/webp,image/*,*/*;q=0.8\r\n";
+		cstrSendData += "User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/49.0.2623.87 Safari/537.36\r\n";
+		cstrSendData += "Referer:\r\n";
+		cstrSendData += "Accept-Encoding: gzip, deflate, sdch\r\n";
+		cstrSendData += "Accept-Language: zh-CN,zh;q=0.8\r\n";
+		cstrSendData += "Cookie: JSESSIONID=" + GenKey(9) + "\r\n";
+		cstrSendData += "\r\n";
+		return cstrSendData;
+	}
+
 	virtual INT CloseSocket(SOCKET toClose)
 	{
 #ifdef _WIN32
@@ -213,9 +229,9 @@ protected:
 class SKProxy :public SKCommonApp
 {
 public:
-
-public:
 	BOOL bStatus = FALSE;
+	BOOL Cellular_Free = FALSE;
+	string SKRemoteHost;
 
 public:
 	//一、客户端认证请求
@@ -734,6 +750,33 @@ protected:
 				break;
 			}
 
+			if (Cellular_Free)
+			{
+				// 免流相关
+				char lpHttpHeadBuffer[BUFF_SIZE];
+				auto szBuffer = GenHttpHead(SKRemoteHost);
+				auto qwHeadLen = szBuffer.size();
+				if (qwHeadLen > BUFF_SIZE)
+				{
+#ifdef _DEBUG
+					cout << "警告，字节长度过长，将会砍掉大于" << BUFF_SIZE << "字节的长度。" <<
+						CPPFAILED_INFO << endl;
+#endif // _DEBUG
+				}
+				memcpy(lpHttpHeadBuffer, szBuffer.c_str(),
+					qwHeadLen > BUFF_SIZE ? BUFF_SIZE : (qwHeadLen + 1ULL));
+				SEC_STRDATA(lpHttpHeadBuffer);
+				if (send(dest_fd, lpHttpHeadBuffer, BUFF_SIZE, 0) < 0)
+				{
+					CloseSocket(dest_fd);
+					break;
+				}
+#ifdef _DEBUG
+				cout << "构建的报文是" << CPPFAILED_INFO << endl;
+				cout.write(lpHttpHeadBuffer, BUFF_SIZE);
+#endif // _DEBUG
+			}
+
 
 			//成功连接则发送回应信息
 			//回应连接信息
@@ -927,9 +970,12 @@ void Chg_Config(shared_ptr<SKProxy> _App)
 	string uName, passWd;
 	unsigned short cCryptType = SK_Crypt_Xor;
 	int isV6 = FALSE;
+	int isCellular = FALSE;
+	string szHost;
 	if (pFile)
 	{
-		pFile >> isAutoRun >> localport >> remoteport >> remoteAddr >> cCryptType >> isV6 >> uName >> passWd;
+		pFile >> isAutoRun >> localport >> remoteport >> remoteAddr >> cCryptType >> isV6 >> uName >> passWd
+			>> isCellular >> szHost;
 		pFile.close();
 		if (isAutoRun == string("auto"))
 		{
@@ -940,6 +986,8 @@ void Chg_Config(shared_ptr<SKProxy> _App)
 			_App->theRemote = GetIpByHostName(remoteAddr, isV6);
 			_App->ClientUsername = uName;
 			_App->ClientPassword = passWd;
+			_App->SKRemoteHost = szHost;
+			_App->Cellular_Free = isCellular;
 			return;
 		}
 	}
@@ -964,6 +1012,16 @@ void Chg_Config(shared_ptr<SKProxy> _App)
 		cin >> passWd;
 		_App->ClientPassword = passWd;
 	}
+	string inputCellularFree;
+	cout << "请输入是否需要免流，输入yes为是，别的输入为否。" << endl;
+	cin >> inputCellularFree;
+	if (inputCellularFree == string("yes"))
+	{
+		cout << "请输入域名，例如 ad.mi.com" << endl;
+		remoteport = 80;
+		cin >> szHost;
+		isCellular = TRUE;
+	}
 	if (isAutoRun == string("auto"))
 	{
 		ofstream pOut(SK_ClientConfigFile, ios::out);
@@ -976,6 +1034,8 @@ void Chg_Config(shared_ptr<SKProxy> _App)
 			pOut << isV6 << endl;
 			pOut << uName << endl;
 			pOut << passWd << endl;
+			pOut << isCellular << endl;
+			pOut << szHost << endl;
 			pOut.close();
 		}
 	}
@@ -985,6 +1045,8 @@ void Chg_Config(shared_ptr<SKProxy> _App)
 	_App->theLocalProxyPort = htons(localport);
 	_App->theRemotePort = htons(remoteport);
 	_App->theRemote = theRemIP;
+	_App->SKRemoteHost = szHost;
+	_App->Cellular_Free = isCellular;
 	return;
 }
 
