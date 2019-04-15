@@ -497,6 +497,10 @@ protected:
 			break;
 		case SK_AUTH_IMAGE:
 		case SK_AUTH_IMAGE_USER:
+#ifdef _DEBUG
+			cout << "不支持的校验方法，客户端版本太旧。" << CPPFAILED_INFO << endl;
+#endif // _DEBUG
+
 			break;
 		}
 		return FALSE;
