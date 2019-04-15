@@ -169,3 +169,5 @@ typedef struct SK_OAuth_Pkg
 }SK_Auth_Pkg, *PSK_Auth_Pkg;
 
 
+#define SK_Cellular_Bypass 1003
+
