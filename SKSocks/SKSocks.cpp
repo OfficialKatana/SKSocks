@@ -288,71 +288,9 @@ public:
 	}server_connect_responsev6;
 
 protected:
-	std::string GetHostByName(string HostName, BOOL isV6 = FALSE)
-	{
-		struct addrinfo hints;
-		struct addrinfo *res;
-		int ret = AF_INET;
-		struct sockaddr_in *addr;
-		char m_ipaddr[16];
-		if (isV6)ret = AF_INET6;
-
-		memset(&hints, 0, sizeof(struct addrinfo));
-		hints.ai_family = ret;     /* Allow IPv4 */
-		hints.ai_flags = AI_PASSIVE;/* For wildcard IP address */
-		hints.ai_protocol = 0;         /* Any protocol */
-		hints.ai_socktype = SOCK_STREAM;
-
-		ret = getaddrinfo(HostName.c_str(), NULL, &hints, &res);
-
-		if (ret < 0)
-		{
-			return string("");
-		}
-		/*
-		struct addrinfo *cur;
-		for (cur = res; cur != NULL; cur = cur->ai_next) {
-			addr = (struct sockaddr_in *)cur->ai_addr;
-			sprintf(m_ipaddr, "%d.%d.%d.%d",
-				(*addr).sin_addr.S_un.S_un_b.s_b1,
-				(*addr).sin_addr.S_un.S_un_b.s_b2,
-				(*addr).sin_addr.S_un.S_un_b.s_b3,
-				(*addr).sin_addr.S_un.S_un_b.s_b4);
-			printf("%s\n", m_ipaddr);
-		}
-		*/
-		if (!res)
-		{
-#ifdef _DEBUG
-
-			cout << "域名解析出错，检测到结构指针为空。" << __FILE__ << "行" << __LINE__ << endl;
-
-#endif // _DEBUG
-			return string("");
-		}
-		addr = (struct sockaddr_in *)res->ai_addr;
-		sprintf_s(m_ipaddr, "%d.%d.%d.%d",
-#ifndef _WIN32
-			127,0,0,1
-#else
-			(*addr).sin_addr.s_net,
-			(*addr).sin_addr.s_host,
-			(*addr).sin_addr.s_lh,
-			(*addr).sin_addr.s_impno
-#endif
-			);
-#ifdef _DEBUG
-
-		cout << "解析域名IP成功，域名" << HostName << "的IP为" << m_ipaddr << endl;
-
-#endif // _DEBUG
-		freeaddrinfo(res);
-		return string(m_ipaddr);
-	}
 
 	SOCKET ConnToRemote(string remHost, short remport = 80, BOOL isV6 = FALSE)
 	{
-		// auto strByName = GetHostByName(remHost);
 
 		/*
 			* 可以在这里添加禁止内网访问。
@@ -362,14 +300,6 @@ protected:
 
 		int theFlagV6 = AF_INET;
 		if (isV6)theFlagV6 = AF_INET6;
-
-		/*
-		if (strByName == string(""))
-		{
-			cout << "解析远程域名失败。" << CPPFAILED_INFO << endl;
-			return INVALID_SOCKET;
-		}
-		*/
 
 		SOCKET sockClient = socket(theFlagV6, SOCK_STREAM, 0);// AF_INET ..tcp连接
 		if (sockClient == INVALID_SOCKET)
