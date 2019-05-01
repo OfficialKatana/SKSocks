@@ -659,10 +659,10 @@ protected:
 			if (isV6)
 			{
 				client_connect_requestv6 * connect_requestv6 = (client_connect_requestv6 *)buffer;
-				sprintf_s(theRemAddr, "%u:%u:%u:%u:%u:%u:%u:%u", (unsigned)(unsigned short)connect_request->addr[0], (unsigned)(unsigned short)connect_request->addr[1],
-					(unsigned)(unsigned short)connect_request->addr[2], (unsigned)(unsigned short)connect_request->addr[3],
-					(unsigned)(unsigned short)connect_request->addr[4], (unsigned)(unsigned short)connect_request->addr[5],
-					(unsigned)(unsigned short)connect_request->addr[6], (unsigned)(unsigned short)connect_request->addr[7]);
+				sprintf_s(theRemAddr, "%u:%u:%u:%u:%u:%u:%u:%u", (unsigned)(unsigned short)connect_requestv6->addr[0], (unsigned)(unsigned short)connect_requestv6->addr[1],
+					(unsigned)(unsigned short)connect_requestv6->addr[2], (unsigned)(unsigned short)connect_requestv6->addr[3],
+					(unsigned)(unsigned short)connect_requestv6->addr[4], (unsigned)(unsigned short)connect_requestv6->addr[5],
+					(unsigned)(unsigned short)connect_requestv6->addr[6], (unsigned)(unsigned short)connect_requestv6->addr[7]);
 			}
 			else
 				sprintf_s(theRemAddr, "%u.%u.%u.%u", (unsigned)(unsigned char)connect_request->addr[0], (unsigned)(unsigned char)connect_request->addr[1],
