@@ -333,14 +333,14 @@ protected:
 			* 提高安全性。
 			* 建议添加IP过滤规则，防止恶意利用。
 		*/
-
-		if (isIPLAN(IPAddr))
-		{
+		if (isIPV6)
+			if (isIPLAN(IPAddr))
+			{
 #ifdef _DEBUG
-			cout << "禁止访问内网资源！" << CPPFAILED_INFO << endl;
+				cout << "禁止访问内网资源！" << CPPFAILED_INFO << endl;
 #endif // _DEBUG
-			return INVALID_SOCKET;
-		}
+				return INVALID_SOCKET;
+			}
 
 		int theFlagV6 = AF_INET;
 		if (isIPV6)theFlagV6 = AF_INET6;
