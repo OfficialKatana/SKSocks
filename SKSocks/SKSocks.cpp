@@ -724,7 +724,7 @@ protected:
 				connect_response.ver = 0x5;
 				connect_response.rep = 0x00;  //连接成功标志
 				connect_response.rsv = 0x00;
-				connect_response.type = 0x04;
+				connect_response.type = 0x01;
 
 				memcpy(buffer1, &connect_response, sizeof(connect_response));//服务端回应数据 设置版本号与结果位，ip与端口号未使用
 				if (send(theSock, buffer1, sizeof(server_connect_response), 0) < 0)break;
@@ -737,7 +737,7 @@ protected:
 				connect_response.ver = 0x5;
 				connect_response.rep = 0x00;  //连接成功标志
 				connect_response.rsv = 0x00;
-				connect_response.type = 0x01;
+				connect_response.type = 0x04;
 
 				memcpy(buffer1, &connect_response, sizeof(connect_response));//服务端回应数据 设置版本号与结果位，ip与端口号未使用
 				if (send(theSock, buffer1, sizeof(server_connect_responsev6), 0) < 0)break;
