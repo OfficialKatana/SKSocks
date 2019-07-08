@@ -83,7 +83,7 @@ limitations under the License.
 #define PKG_TRANSFER_TIME_OUT 5000UL
 #define MAX_RUNNING_THREAD 50ULL // 最大并发是4线程
 #define MAX_THREAD_COUNT 2ULL*MAX_RUNNING_THREAD // 最大缓存线程
-#define SK_VALID_PERIOD chrono::minutes(2)
+#define SK_VALID_PERIOD std::chrono::minutes(2)
 
 #define SK_Halo "SK Socket!"
 
@@ -93,8 +93,10 @@ limitations under the License.
 #define SK_ServerUserFile "ufile.txt"
 
 #define SK_Conn_IPV6 0x1
-#define SK_Conn_IPV4 0x2 // IPV4
-#define SK_Conn_LocalIPV4 0x4 // 本机IPV4，可以访问广域网IPV6
+#define SK_Conn_IPV4 2 // IPV4
+#define SK_Conn_LocalIPV4 4 // 本机IPV4，可以访问广域网IPV6
+#define SK_Conn_SUDP 8 // UDP支持，默认不开启。
+#define SK_Conn_STCP 0 //默认
 #define SK_Crypt_Xor 0x1 // 最快
 #define SK_Crypt_RSA 0x2 // RSA
 #define SK_Crypt_AES 0x4
@@ -104,11 +106,18 @@ limitations under the License.
 #define SK_AUTH_IMAGE 0x2ULL // 图片验证码
 #define SK_AUTH_USER 0x4ULL // 用户名密码
 #define SK_AUTH_IMAGE_USER 0x8ULL // 用户名密码以及图片验证码（推荐）
+#define SK_AUTH_SESSION 0x10ULL
+
+#define SK_AUTH_IGNORED_SESSION_FORCECHECK 1
+
+
+ // TCP and UDP support
+// e.g. SK_Conn_IPV4 | SK_Conn_STCP
 
 typedef struct SK_ConnInfo
 {
 	typedef unsigned char CBYTE;
-	CBYTE cConnIPFlag = SK_Conn_IPV4;
+	CBYTE cConnIPFlag = SK_Conn_IPV4 | SK_Conn_STCP;
 	CBYTE cConnCryptType = SK_Crypt_Xor;
 	CBYTE cConnAuthType = SK_AUTH_NO;
 	CBYTE cConnReserve = 0; //保留
