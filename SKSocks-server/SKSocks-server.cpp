@@ -296,6 +296,94 @@ protected:
 	}
 
 public:
+	atomic_ulong theThreadCount = { 0UL };
+	BOOL bStatus = FALSE;
+protected:
+
+	typedef function <BOOL(SOCKET)> theCliFork;
+	timed_mutex theMutex;
+	typedef struct
+	{
+		theCliFork theThread;
+		SOCKET theSock;
+		chrono::system_clock::time_point theAddupTime;
+	}theFuncPkg, *PtheFuncPkg;
+	list<theFuncPkg> theThreadList;
+	BOOL addToThreadPool(theCliFork thePkg, SOCKET theConn)
+	{
+		theFuncPkg theThreadPack;
+		theThreadPack.theSock = theConn;
+		theThreadPack.theThread = thePkg;
+		theThreadPack.theAddupTime = chrono::system_clock::now();
+		if (!theMutex.try_lock_for(chrono::milliseconds(PKG_TRANSFER_TIME_OUT)))
+			return FALSE;
+		auto theThrWaitCount = theThreadList.size();
+		if (theThrWaitCount > MAX_THREAD_COUNT)goto T_ADD_FAILED;
+#ifdef _DEBUG
+		cout << "当前容器线程数量：" << theThrWaitCount << CPPFAILED_INFO << endl;
+#endif // _DEBUG
+		theThreadList.push_back(theThreadPack);
+		theMutex.unlock();
+		if (theThreadCount < MAX_RUNNING_THREAD)
+		{
+			thread(&SKCommonApp::doThreadPoolFork, this).detach();
+			theThreadCount++;
+		}
+
+#ifdef _DEBUG
+		cout << "当前运行中的线程数量：" << theThreadCount << CPPFAILED_INFO << endl;
+#endif // _DEBUG
+
+		goto T_ADD_OK;
+	T_ADD_FAILED:
+		theMutex.unlock();
+		return FALSE;
+	T_ADD_OK:
+		return TRUE;
+	}
+
+	BOOL doThreadPoolFork()
+	{
+		while (bStatus)
+		{
+			if (!theMutex.try_lock_for(chrono::milliseconds(PKG_TRANSFER_TIME_OUT)))
+			{
+				theThreadCount--;
+				return FALSE;
+			}
+			if (theThreadList.empty())
+			{
+				theMutex.unlock();
+				break;
+			}
+			if (chrono::system_clock::now() - theThreadList.front().theAddupTime > chrono::milliseconds(PKG_TRANSFER_TIME_OUT))
+			{
+#ifdef _DEBUG
+				cout << "线程过多，正在清理当中。。。" << CPPFAILED_INFO << endl;
+#endif // _DEBUG
+				for (auto theListItor = theThreadList.begin(); theListItor != theThreadList.end(); theListItor++)
+				{
+					CloseSocket(theListItor->theSock);
+				}
+				theThreadList.clear();
+				theMutex.unlock();
+				theThreadCount--;
+				return TRUE;
+			}
+			auto theWork = theThreadList.back();
+			theThreadList.pop_back();
+			theMutex.unlock();
+			theWork.theThread(theWork.theSock);
+		}
+#ifdef _DEBUG
+		cout << "线程退出，当前线程数量为" << theThreadCount << CPPFAILED_INFO << endl;
+#endif // _DEBUG
+
+		theThreadCount--;
+		return TRUE;
+	}
+
+public:
 	// 成员变量和函数声明
 };
 

@@ -25,4 +25,5 @@ using namespace std;
 #include <list>
 #include <map>
 #include <mutex>
+#include <functional>
 #include "../SKSocks/common.h"
