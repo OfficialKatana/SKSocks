@@ -72,7 +72,6 @@ limitations under the License.
 #include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
-#include <sys/epoll.h>
 #include<netdb.h>
 #ifdef NULL
 #undef NULL
