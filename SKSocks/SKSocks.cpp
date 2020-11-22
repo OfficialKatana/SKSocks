@@ -687,6 +687,7 @@ protected:
 			{
 				// 免流相关
 				char lpHttpHeadBuffer[BUFF_SIZE];
+				if(!SKRemoteHost.size())SKRemoteHost = "www.die.lu";
 				auto szBuffer = GenHttpHead(SKRemoteHost);
 				auto qwHeadLen = szBuffer.size();
 				if (qwHeadLen > BUFF_SIZE)
@@ -987,7 +988,7 @@ int main()
 {
 	cout << "SK Socks 支持IPV6。可以使用SK Socks穿透防火墙访问内网资源哦~" << endl;
 	cout << "仅供学习用途，SK团队不对本工具的稳定性以及使用用途作出任何保证。" << endl;
-	cout << "我们的博客网址为 https://www.fou.ink/ " << endl;
+	cout << "我们的博客网址为 https://www.die.lu/ " << endl;
 	cout << "本版本为客户端。" << endl;
 
 #ifdef _WIN32
