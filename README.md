@@ -20,9 +20,8 @@
 ##有问题反馈
 在使用中有任何问题，欢迎反馈给我，可以用以下联系方式跟我交流
 
-* 邮件(qwq#fou.ink, 把#换成@)
-* QQ: 1764655874
-* 博客：[麦科技](http://www.fou.ink)
+* 邮件: [support@die.lu](mailto:support@die.lu)
+* 博客：[麦科技](http://www.die.lu)
 
 ##捐助开发者
 在兴趣的驱动下,写一个`免费`的东西，有欣喜，也还有汗水，希望你喜欢我的作品，同时也能支持一下。
@@ -33,6 +32,6 @@
 ```javascript
   var ihubo = {
     nickName  : "Saurik",
-    site : "http://www.fou.ink"
+    site : "http://www.die.lu"
   }
 ```
